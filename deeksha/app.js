@@ -450,8 +450,12 @@
       if (x.final && !x.today) { g.fillStyle = '#FFB547'; g.beginPath(); g.arc(cxp + cw - 14, cyp + 14, 6, 0, 7); g.fill(); }
     });
 
-    g.fillStyle = '#FFB547'; g.font = "600 40px 'Noto Sans Malayalam', sans-serif";
-    g.fillText('ശരണം അയ്യപ്പ', W / 2, 1745);
+    g.fillStyle = '#FFB547'; g.font = '800 44px ' + D;
+    const word = 'TATVAMASI', sp = 12;
+    let ww = -sp; for (const ch of word) ww += g.measureText(ch).width + sp;
+    g.textAlign = 'left'; spaced(g, word, (W - ww) / 2, 1730, sp); g.textAlign = 'center';
+    g.fillStyle = '#D9CFBF'; g.font = 'italic 500 28px ' + I;
+    g.fillText('“You are That” · the divine you seek is within you', W / 2, 1778);
     g.textAlign = 'left';
 
     return new Promise((res) => c.toBlob(res, 'image/png'));
