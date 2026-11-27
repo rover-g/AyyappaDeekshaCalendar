@@ -33,9 +33,10 @@
       <div>
         <p class="eyebrow">Swamiye Saranam Ayyappa</p>
         <h1 class="display" id="title">Mandala Deeksha</h1>
-        <p class="range" id="rangeLabel">Nov 11 → Dec 22</p>
+        <p class="range d-only" id="rangeLabel">Nov 11 → Dec 22</p>
+        <p class="today-line m-only" id="todayLine">—</p>
       </div>
-      <div class="clock">
+      <div class="clock d-only">
         <span class="clock-time display" id="clockTime">--:--</span>
         <span class="clock-date" id="clockDate">—</span>
       </div>
@@ -54,6 +55,8 @@
         </div>
       </div>
 
+      <p class="compact m-only" id="compact">—</p>
+
       <div class="stats">
         <div class="stat">
           <span class="k">Days completed</span>
@@ -71,9 +74,34 @@
       </div>
     </section>
 
-    <section class="board" aria-label="Deeksha calendar">
+    <section class="board collapsed" id="board" aria-label="Deeksha calendar">
+      <div class="board-head m-only">
+        <h2 class="display">Calendar</h2>
+        <button type="button" class="pill-btn" id="todayBtn">Today</button>
+      </div>
       <div class="grid" id="dow"></div>
       <div class="grid" id="days"></div>
+      <button type="button" class="full-btn m-only" id="fullBtn" aria-expanded="false" aria-controls="days">Full calendar</button>
+    </section>
+
+    <section class="info m-only" aria-label="Today and final day">
+      <div class="info-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <div><p class="info-main" id="infoDate">—</p><p class="info-sub" id="infoDay">—</p></div>
+      </div>
+      <div class="info-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
+        <div><p class="info-main" id="infoFinal">—</p><p class="info-sub" id="infoState" hidden></p></div>
+      </div>
+    </section>
+
+    <section class="m-count m-only" aria-live="off">
+      <p class="m-count-label" id="mCountLabel">Time until the final day ends</p>
+      <div class="m-count-row">
+        <div><span class="display" id="mDays">—</span><small>days</small></div>
+        <div><span class="display" id="mHours">—</span><small>hours</small></div>
+        <div><span class="display" id="mMins">—</span><small>minutes</small></div>
+      </div>
     </section>
 
     <footer class="foot">
@@ -135,38 +163,86 @@
 </button>
 
 <!-- Wallpaper switcher + settings -->
-<nav class="dock" aria-label="Wallpaper and settings">
+<nav class="dock d-only" aria-label="Wallpaper and settings">
   <div class="thumbs" id="thumbs"></div>
   <button class="icon-btn" id="autoBtn" type="button" aria-pressed="true" aria-label="Auto-rotate wallpapers">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
+  </button>
+  <button class="icon-btn" id="storyBtnD" type="button" aria-label="Share today as an Instagram story image">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
   </button>
   <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
   </button>
 </nav>
 
-<dialog id="settings">
+<!-- Phone bottom bar -->
+<nav class="mbar m-only" aria-label="Controls">
+  <button type="button" class="mbar-btn" id="audioBtn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><span>Audio</span></button>
+  <button type="button" class="mbar-btn" id="storyBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span>Share</span></button>
+  <button type="button" class="mbar-btn" id="wpBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg><span>Wallpaper</span></button>
+  <button type="button" class="mbar-btn" id="settingsBtnM"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
+</nav>
+
+<dialog id="wpSheet" class="sheet" aria-labelledby="wpTitle">
+  <div class="dlg-head"><h2 class="display" id="wpTitle">Wallpaper</h2>
+    <button type="button" class="x-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="dlg-body">
+    <div class="thumbs big" id="mThumbs"></div>
+    <label class="check"><input type="checkbox" id="mAuto"> Change wallpaper automatically</label>
+  </div>
+</dialog>
+
+<dialog id="storySheet" class="sheet" aria-labelledby="storyTitle">
+  <div class="dlg-head"><h2 class="display" id="storyTitle">Share today</h2>
+    <button type="button" class="x-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="dlg-body">
+    <div class="story-preview"><img id="storyImg" alt="Story image of today's Deeksha progress"><p id="storyMsg">Creating your story image…</p></div>
+    <p class="hint">Tap <b>Share</b> and pick Instagram. If Instagram isn't in the list, tap <b>Save image</b>, then add it to your story from Photos.</p>
+  </div>
+  <div class="dlg-foot two-btn">
+    <button type="button" class="ghost" id="storySave" disabled>Save image</button>
+    <button type="button" class="primary" id="storyShare" disabled>Share</button>
+  </div>
+</dialog>
+
+<dialog id="settings" class="sheet" aria-labelledby="setTitle">
   <form method="dialog" class="settings-form">
-    <h2 class="display">Deeksha settings</h2>
-    <label>Title<input type="text" id="sTitle" maxlength="40"></label>
-    <div class="two">
-      <label>Start date<input type="date" id="sStart" required></label>
-      <label>Final day<input type="date" id="sEnd" required></label>
+    <div class="dlg-head"><h2 class="display" id="setTitle">Settings</h2>
+      <button type="button" class="x-btn" id="sClose" aria-label="Close settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="dlg-body">
+      <fieldset>
+        <legend>Your Deeksha</legend>
+        <label>Title<input type="text" id="sTitle" maxlength="40" autocomplete="off"></label>
+        <div class="two">
+          <label>Start date<input type="date" id="sStart" required></label>
+          <label>Final day<input type="date" id="sEnd" required></label>
+        </div>
+        <button type="button" class="share" id="sShare">Share link with these dates</button>
+      </fieldset>
+      <fieldset>
+        <legend>Appearance</legend>
+        <label>Finished days
+          <select id="sMark">
+            <option value="check">Checkmark</option>
+            <option value="cross">Cross over the date</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="sDiya"> Diya lamp</label>
+        <label class="check"><input type="checkbox" id="sEmbers"> Floating lamp embers</label>
+        <label>Wallpaper change every
+          <select id="sRotate">
+            <option value="0">Never</option>
+            <option value="60">1 minute</option>
+            <option value="300">5 minutes</option>
+            <option value="1800">30 minutes</option>
+          </select>
+        </label>
+      </fieldset>
+      <button type="button" class="link-btn" id="sReset">Reset everything to defaults</button>
     </div>
-    <label class="check"><input type="checkbox" id="sEmbers"> Floating lamp embers</label>
-    <label class="check"><input type="checkbox" id="sDiya"> Diya lamp</label>
-    <label>Wallpaper change every
-      <select id="sRotate">
-        <option value="0">Never</option>
-        <option value="60">1 minute</option>
-        <option value="300">5 minutes</option>
-        <option value="1800">30 minutes</option>
-      </select>
-    </label>
-    <button type="button" class="share" id="sShare">Share link with these dates</button>
-    <div class="actions">
-      <button type="button" class="ghost" id="sReset">Reset</button>
-      <button type="submit" value="save" class="primary">Save</button>
+    <div class="dlg-foot">
+      <button type="submit" value="save" class="primary wide">Save</button>
     </div>
   </form>
 </dialog>
