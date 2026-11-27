@@ -21,7 +21,8 @@
   function save(patch) {
     const next = Object.assign({}, load(), patch);
     const keep = { title: next.title, start: next.start, end: next.end, rotateSeconds: next.rotateSeconds,
-                   embers: next.embers, diya: next.diya, mark: next.mark, wallpaperIndex: next.wallpaperIndex, auto: next.auto };
+                   embers: next.embers, diya: next.diya, mark: next.mark, wallpaperIndex: next.wallpaperIndex, auto: next.auto,
+                   wallpaperId: next.wallpaperId, hidden: next.hidden || [], shuffle: !!next.shuffle };
     try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
     S = load();
   }
@@ -177,55 +178,152 @@
     $('mDays').textContent = d; $('mHours').textContent = pad(h); $('mMins').textContent = pad(m);
   }
 
-  // ---------- wallpapers ----------
-  const layers = [$('bgA'), $('bgB')];
-  let front = 0, rotateTimer = null, currentUrl = '', currentWp = null;
-  function showWallpaper(i, instant) {
-    const list = S.wallpapers; if (!list.length) return;
-    i = ((i % list.length) + list.length) % list.length;
-    const wp = list[i];
-    const next = layers[1 - front];
-    const img = new Image();
-    let url = wp.src;
-    img.onerror = () => { if (wp.remote && url !== wp.remote) { url = wp.remote; img.src = url; } };
-    img.onload = () => {
-      next.style.backgroundImage = 'url("' + url + '")';
-      next.style.setProperty('--pos', wp.focus || '70% 50%');
-      next.style.setProperty('--pos-m', wp.focusMobile || wp.focus || '75% 40%');
-      if (instant) next.style.transition = 'none';
-      next.classList.add('on'); layers[front].classList.remove('on');
-      if (instant) requestAnimationFrame(() => { next.style.transition = ''; });
-      front = 1 - front;
-      currentUrl = url; currentWp = wp; story.dirty = true;
-    };
-    img.src = wp.src;
-    save({ wallpaperIndex: i });
-    document.querySelectorAll('.thumb').forEach((t) => t.setAttribute('aria-pressed', +t.dataset.i === i ? 'true' : 'false'));
-  }
-  function buildThumbs() {
-    const html = S.wallpapers.map((w, i) =>
-      '<button type="button" class="thumb" data-i="' + i + '" aria-label="Wallpaper: ' + w.name + '" aria-pressed="false" ' +
-      'style="background-image:url(&quot;' + w.src + '&quot;)' + (w.remote ? ',url(&quot;' + w.remote + '&quot;)' : '') + '"><span>' + w.name + '</span></button>'
-    ).join('');
-    ['thumbs', 'mThumbs'].forEach((id) => {
-      $(id).innerHTML = html;
-      $(id).addEventListener('click', (e) => {
-        const b = e.target.closest('.thumb'); if (!b) return;
-        showWallpaper(+b.dataset.i); restartRotate();
-      });
+  // ---------- wallpaper library ----------
+  // Built-in wallpapers come from config.js. Photos you add are stored in this browser (IndexedDB),
+  // shrunk to 2560 px, and never uploaded anywhere.
+  const DBN = 'deeksha-wallpapers';
+  function idb() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DBN, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('w', { keyPath: 'id' });
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
     });
   }
+  async function dbDo(mode, fn) {
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('w', mode), req = fn(tx.objectStore('w'));
+      tx.oncomplete = () => res(req && req.result); tx.onerror = () => rej(tx.error);
+    });
+  }
+  let custom = [];
+  async function loadCustom() {
+    let rows = [];
+    try { rows = (await dbDo('readonly', (st) => st.getAll())) || []; } catch (e) {}
+    custom.forEach((c) => URL.revokeObjectURL(c.src));
+    custom = rows.sort((x, y) => x.added - y.added).map((r) => ({
+      id: 'c:' + r.id, dbId: r.id, name: r.name, src: URL.createObjectURL(r.blob),
+      focus: '50% 40%', focusMobile: '50% 35%', custom: true }));
+  }
+  function library() {
+    const hidden = S.hidden || [];
+    return (BASE.wallpapers || []).map((w, i) => Object.assign({ id: 'b:' + i }, w))
+      .filter((w) => !hidden.includes(w.id)).concat(custom);
+  }
+  async function shrink(file) {
+    const url = URL.createObjectURL(file);
+    const img = await loadImg(url);
+    URL.revokeObjectURL(url);
+    if (!img) throw new Error('not an image');
+    const k = Math.min(1, 2560 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return new Promise((res) => c.toBlob(res, 'image/jpeg', .86));
+  }
+  async function addPhotos(files) {
+    const status = $('wpStatus');
+    let added = 0, lastId = null;
+    const list = [...files].filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+    for (const f of list) {
+      status.textContent = 'Adding ' + (added + 1) + ' of ' + list.length + '…';
+      try {
+        const blob = await shrink(f);
+        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        await dbDo('readwrite', (st) => st.put({ id, name: (f.name || 'Photo').replace(/\.[^.]+$/, '').slice(0, 24), blob, added: Date.now() }));
+        added++; lastId = 'c:' + id;
+      } catch (e) { console.error('add photo', e); }
+    }
+    status.textContent = added ? added + (added === 1 ? ' photo added.' : ' photos added.') : 'Could not add that photo. Try a JPG or PNG.';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    await loadCustom(); buildThumbs();
+    if (lastId) showWallpaper(lastId);
+  }
+  async function removeWallpaper(id) {
+    const w = library().find((x) => x.id === id); if (!w) return;
+    if (!confirm('Remove "' + w.name + '" from your wallpapers?' + (w.custom ? '' : ' (Reset in Settings brings the built-in ones back.)'))) return;
+    if (w.custom) { try { await dbDo('readwrite', (st) => st.delete(w.dbId)); } catch (e) {} await loadCustom(); }
+    else save({ hidden: (S.hidden || []).concat(id) });
+    buildThumbs();
+    if (S.wallpaperId === id) showWallpaper(pickNext(id));
+  }
+
+  // ---------- showing wallpapers ----------
+  const layers = [$('bgA'), $('bgB')];
+  let front = 0, rotateTimer = null, currentUrl = '', currentWp = null;
+  function pickNext(fromId, random) {
+    const lib = library(); if (!lib.length) return null;
+    if (random || S.shuffle) {
+      const others = lib.filter((w) => w.id !== fromId);
+      return (others.length ? others : lib)[Math.floor(Math.random() * (others.length || lib.length))].id;
+    }
+    const i = lib.findIndex((w) => w.id === fromId);
+    return lib[(i + 1) % lib.length].id;
+  }
+  function showWallpaper(id, instant) {
+    return new Promise((done) => {
+      const lib = library();
+      const wp = lib.find((w) => w.id === id) || lib[0];
+      if (!wp) { layers.forEach((l) => l.classList.remove('on')); currentUrl = ''; currentWp = null; story.dirty = true; return done(); }
+      const next = layers[1 - front];
+      const img = new Image();
+      let url = wp.src;
+      img.onerror = () => { if (wp.remote && url !== wp.remote) { url = wp.remote; img.src = url; } else done(); };
+      img.onload = () => {
+        next.style.backgroundImage = 'url("' + url + '")';
+        next.style.setProperty('--pos', wp.focus || '70% 50%');
+        next.style.setProperty('--pos-m', wp.focusMobile || wp.focus || '75% 40%');
+        if (instant) next.style.transition = 'none';
+        next.classList.add('on'); layers[front].classList.remove('on');
+        if (instant) requestAnimationFrame(() => { next.style.transition = ''; });
+        front = 1 - front;
+        currentUrl = url; currentWp = wp; story.dirty = true;
+        done();
+      };
+      img.src = wp.src;
+      save({ wallpaperId: wp.id });
+      document.querySelectorAll('.thumb').forEach((t) => t.setAttribute('aria-pressed', t.dataset.id === wp.id ? 'true' : 'false'));
+    });
+  }
+  function thumbHtml(w, withDelete) {
+    const bg = 'background-image:url(&quot;' + w.src + '&quot;)' + (w.remote ? ',url(&quot;' + w.remote + '&quot;)' : '');
+    const t = '<button type="button" class="thumb" data-id="' + w.id + '" aria-label="Wallpaper: ' + w.name + '" aria-pressed="' +
+              (w.id === S.wallpaperId) + '" style="' + bg + '"><span>' + w.name + '</span></button>';
+    return withDelete ? '<div class="tile">' + t + '<button type="button" class="del" data-del="' + w.id + '" aria-label="Remove ' + w.name + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' : t;
+  }
+  function buildThumbs() {
+    const lib = library();
+    $('thumbs').innerHTML = lib.slice(0, 4).map((w) => thumbHtml(w, false)).join('');
+    $('mThumbs').innerHTML = lib.map((w) => thumbHtml(w, true)).join('') +
+      '<label class="tile add-tile"><input type="file" id="wpFile" accept="image/*" multiple>' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add photos</span></label>';
+    $('wpCount').textContent = lib.length + (lib.length === 1 ? ' wallpaper' : ' wallpapers');
+  }
+  ['thumbs', 'mThumbs'].forEach((id) => {
+    $(id).addEventListener('click', (e) => {
+      const d = e.target.closest('[data-del]'); if (d) { removeWallpaper(d.dataset.del); return; }
+      const b = e.target.closest('.thumb'); if (!b) return;
+      showWallpaper(b.dataset.id); restartRotate();
+    });
+    $(id).addEventListener('change', (e) => {
+      if (e.target.id === 'wpFile' && e.target.files.length) addPhotos(e.target.files);
+    });
+  });
   function restartRotate() {
     clearInterval(rotateTimer);
     $('autoBtn').setAttribute('aria-pressed', S.auto ? 'true' : 'false');
     $('mAuto').checked = !!S.auto;
-    if (S.auto && S.rotateSeconds > 0) rotateTimer = setInterval(() => showWallpaper(S.wallpaperIndex + 1), S.rotateSeconds * 1000);
+    $('mShuffle').checked = !!S.shuffle;
+    if (S.auto && S.rotateSeconds > 0) rotateTimer = setInterval(() => showWallpaper(pickNext(S.wallpaperId)), S.rotateSeconds * 1000);
   }
   $('autoBtn').addEventListener('click', () => { save({ auto: !S.auto }); restartRotate(); });
   $('mAuto').addEventListener('change', () => {
     const on = $('mAuto').checked;
     save({ auto: on, rotateSeconds: on && !S.rotateSeconds ? 300 : S.rotateSeconds }); restartRotate();
   });
+  $('mShuffle').addEventListener('change', () => { save({ shuffle: $('mShuffle').checked }); });
 
   // ---------- embers (lamp sparks drifting up) ----------
   const cv = $('embers'), cx = cv.getContext('2d');
@@ -276,6 +374,7 @@
     });
   });
   $('wpBtn').addEventListener('click', () => $('wpSheet').showModal());
+  $('wpBtnD').addEventListener('click', () => $('wpSheet').showModal());
 
   // ---------- settings ----------
   const dlg = $('settings');
@@ -300,10 +399,10 @@
     renderCalendar(true); tick(); setEmbers(S.embers); restartRotate(); applyDiya();
   });
   $('sReset').addEventListener('click', () => {
-    if (!confirm('Reset your title, dates and appearance to the defaults?')) return;
+    if (!confirm('Reset your title, dates and appearance to the defaults? Photos you added are kept.')) return;
     try { localStorage.removeItem(KEY); } catch (e) {}
     S = load(); dlg.close('cancel');
-    renderCalendar(true); tick(); setEmbers(S.embers); restartRotate(); showWallpaper(0); applyDiya(); setDiyaLit(true);
+    renderCalendar(true); tick(); setEmbers(S.embers); restartRotate(); buildThumbs(); showWallpaper(library()[0] && library()[0].id); applyDiya(); setDiyaLit(true);
   });
   $('sShare').addEventListener('click', async () => {
     const u = new URL(location.href.split('?')[0]);
@@ -320,15 +419,26 @@
   });
 
   // ---------- Instagram story image (1080 × 1920) ----------
-  const story = { dirty: true, blob: null, file: null, url: '' };
+  const story = { dirty: true, blob: null, file: null, url: '', usedWallpaper: null };
 
+  // Images from another website (e.g. the Higgsfield fallback links) can be shown but not copied into
+  // a new image unless that site allows it, so they are requested in "CORS" mode and dropped if refused.
   function loadImg(src) {
     return new Promise((res) => {
       if (!src) return res(null);
+      const remote = new URL(src, location.href).origin !== location.origin;
       const im = new Image();
+      if (remote) im.crossOrigin = 'anonymous';
       im.onload = () => res(im); im.onerror = () => res(null);
-      im.src = src;
+      im.src = remote ? src + (src.includes('?') ? '&' : '?') + 'story=1' : src;
     });
+  }
+  function canExport(cv) { try { cv.getContext('2d').getImageData(0, 0, 1, 1); return true; } catch (e) { return false; } }
+  function plainBackground(g, W, H) {
+    g.fillStyle = '#0A0806'; g.fillRect(0, 0, W, H);
+    const r = g.createRadialGradient(W * .7, H * .32, 20, W * .7, H * .32, W * .9);
+    r.addColorStop(0, 'rgba(255,170,70,.35)'); r.addColorStop(.5, 'rgba(140,70,20,.18)'); r.addColorStop(1, 'rgba(10,8,6,0)');
+    g.fillStyle = r; g.fillRect(0, 0, W, H);
   }
   function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
   function spaced(c, text, x, y, sp) { // letter-spaced text, left aligned
@@ -366,12 +476,15 @@
     const D = "'Bricolage Grotesque', Inter, sans-serif", I = 'Inter, system-ui, sans-serif';
 
     // background: current wallpaper, framed like the phone view
-    g.fillStyle = '#0A0806'; g.fillRect(0, 0, W, H);
+    plainBackground(g, W, H);
     const img = await loadImg(currentUrl);
+    story.usedWallpaper = false;
     if (img) {
       const s = Math.max(W / img.width, H / img.height), iw = img.width * s, ih = img.height * s;
       const pos = ((currentWp && (currentWp.focusMobile || currentWp.focus)) || '75% 40%').split(' ').map(parseFloat);
       g.drawImage(img, (W - iw) * (pos[0] / 100), (H - ih) * ((pos[1] || 50) / 100), iw, ih);
+      if (canExport(c)) story.usedWallpaper = true;
+      else plainBackground(g, W, H); // wallpaper can't be exported: paint over it so the image can still be saved
     }
     let sh = g.createLinearGradient(0, 0, 0, H);
     sh.addColorStop(0, 'rgba(8,6,4,.86)'); sh.addColorStop(.2, 'rgba(8,6,4,.5)'); sh.addColorStop(.36, 'rgba(8,6,4,.4)');
@@ -464,7 +577,7 @@
   async function openStory() {
     const sheet = $('storySheet');
     $('storyShare').disabled = true; $('storySave').disabled = true;
-    sheet.showModal();
+    if (!sheet.open) sheet.showModal();
     if (story.dirty || !story.blob) {
       $('storyImg').removeAttribute('src'); $('storyMsg').textContent = 'Creating your story image…';
       try {
@@ -476,11 +589,13 @@
         story.file = new File([story.blob], 'deeksha-day-' + m.dayNum + '.png', { type: 'image/png' });
         story.dirty = false;
       } catch (e) {
-        $('storyMsg').textContent = 'Could not create the image. Switch to another wallpaper and try again.';
+        console.error('story', e);
+        $('storyMsg').textContent = 'Could not create the image (' + (e && e.message || 'unknown error') + '). Close this and try again.';
         return;
       }
     }
     $('storyImg').src = story.url;
+    $('storyHint').hidden = story.usedWallpaper !== false || !currentUrl;
     $('storySave').disabled = false;
     $('storyShare').disabled = !(navigator.canShare && navigator.canShare({ files: [story.file] }));
   }
@@ -493,6 +608,15 @@
     a.href = story.url; a.download = story.file ? story.file.name : 'deeksha.png';
     document.body.appendChild(a); a.click(); a.remove();
   });
+  $('storyNew').addEventListener('click', async () => {
+    if (library().length < 2) { $('wpSheet').showModal(); return; }
+    $('storyNew').disabled = true;
+    // prefer your own photos: they always work in the story image
+    const own = custom.filter((w) => w.id !== S.wallpaperId);
+    await showWallpaper(own.length ? own[Math.floor(Math.random() * own.length)].id : pickNext(S.wallpaperId, true));
+    await openStory();
+    $('storyNew').disabled = false;
+  });
   $('storyBtn').addEventListener('click', openStory);
   $('storyBtnD').addEventListener('click', openStory);
 
@@ -501,8 +625,13 @@
   $('audioBtn').hidden = tracks.length === 0;
 
   // ---------- go ----------
-  buildThumbs();
-  showWallpaper(S.wallpaperIndex || 0, true);
+  if (!S.wallpaperId) S.wallpaperId = 'b:' + (S.wallpaperIndex || 0); // settings saved by the older version
+  loadCustom().then(() => {
+    buildThumbs();
+    const lib = library();
+    const keep = lib.find((w) => w.id === S.wallpaperId);
+    showWallpaper(S.shuffle || !keep ? pickNext(S.wallpaperId, S.shuffle) : keep.id, true);
+  });
   renderCalendar(true);
   tick(); setInterval(tick, 1000);
   setEmbers(S.embers);
