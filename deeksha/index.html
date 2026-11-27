@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0806">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Deeksha">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<title>Swamiye Saranam Ayyappa · Deeksha Countdown</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Wallpaper layers (crossfade + slow Ken Burns drift) -->
+<div class="bg" aria-hidden="true">
+  <div class="bg-layer" id="bgA"></div>
+  <div class="bg-layer" id="bgB"></div>
+  <div class="bg-shade"></div>
+  <canvas id="embers"></canvas>
+</div>
+
+<main class="shell">
+  <section class="panel">
+
+    <header class="top">
+      <div>
+        <p class="eyebrow">Swamiye Saranam Ayyappa</p>
+        <h1 class="display" id="title">Mandala Deeksha</h1>
+        <p class="range" id="rangeLabel">Nov 11 → Dec 22</p>
+      </div>
+      <div class="clock">
+        <span class="clock-time display" id="clockTime">--:--</span>
+        <span class="clock-date" id="clockDate">—</span>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="52" class="ring-track"></circle>
+          <circle cx="60" cy="60" r="52" class="ring-fill" id="ringFill"></circle>
+        </svg>
+        <div class="ring-center">
+          <span class="ring-k">Day</span>
+          <span class="ring-v display" id="dayNum">—</span>
+          <span class="ring-s" id="dayOf">of —</span>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="k">Days completed</span>
+          <span class="v display" id="done">—</span>
+        </div>
+        <div class="stat hot">
+          <span class="k">Days remaining</span>
+          <span class="v display" id="left">—</span>
+          <span class="s">including today</span>
+        </div>
+        <div class="stat wide">
+          <span class="k">Until the final day ends</span>
+          <span class="countdown display" id="countdown">—</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="board" aria-label="Deeksha calendar">
+      <div class="grid" id="dow"></div>
+      <div class="grid" id="days"></div>
+    </section>
+
+    <footer class="foot">
+      <div class="legend">
+        <span><i class="sw sw-done"></i>Completed</span>
+        <span><i class="sw sw-today"></i>Today</span>
+        <span><i class="sw sw-next"></i>Upcoming</span>
+      </div>
+      <p class="mantra" id="mantra">ശരണം അയ്യപ്പ</p>
+    </footer>
+  </section>
+</main>
+
+<!-- Diya: aura lights the scene, button holds the lamp (tap to put out / relight) -->
+<div class="diya-aura" aria-hidden="true"></div>
+<button class="diya ignite" id="diya" type="button" aria-pressed="true" aria-label="Diya lamp. Tap to put out or relight">
+  <span class="diya-pool" aria-hidden="true"></span>
+  <svg viewBox="0 0 200 230" aria-hidden="true">
+    <defs>
+      <radialGradient id="dHalo" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#FFC56A" stop-opacity=".75"/>
+        <stop offset=".45" stop-color="#FF9A2E" stop-opacity=".25"/>
+        <stop offset="1" stop-color="#FF8A1F" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="dOuter" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FF4E1A" stop-opacity=".9"/>
+        <stop offset=".5" stop-color="#FF9628"/>
+        <stop offset="1" stop-color="#FFC24F"/>
+      </linearGradient>
+      <linearGradient id="dBody" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#C8642F"/>
+        <stop offset=".55" stop-color="#8E3A17"/>
+        <stop offset="1" stop-color="#4A1A08"/>
+      </linearGradient>
+      <linearGradient id="dOil" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#2A0F04"/>
+        <stop offset=".5" stop-color="#6B3510"/>
+        <stop offset="1" stop-color="#2A0F04"/>
+      </linearGradient>
+    </defs>
+    <g class="flame-group">
+      <circle class="halo" cx="100" cy="98" r="62" fill="url(#dHalo)"/>
+      <path class="flame f-outer" d="M100 140 C70 129 73 92 100 26 C127 92 130 129 100 140 Z" fill="url(#dOuter)"/>
+      <path class="flame f-mid" d="M100 140 C81 131 83 103 100 58 C117 103 119 131 100 140 Z" fill="#FFD563"/>
+      <path class="flame f-core" d="M100 139 C90 134 91 117 100 90 C109 117 110 134 100 139 Z" fill="#FFF8E2"/>
+      <ellipse cx="100" cy="136" rx="7" ry="4.5" fill="#6FA8FF" opacity=".55"/>
+    </g>
+    <path class="smoke" d="M100 132 C92 112 110 98 100 78 C92 62 106 50 100 34" fill="none" stroke="#CFC6B8" stroke-width="3" stroke-linecap="round"/>
+    <path d="M100 150 Q98 144 100 138" stroke="#1E0C04" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <path d="M14 150 C20 197 68 211 100 211 C132 211 180 197 186 150 Z" fill="url(#dBody)"/>
+    <path d="M28 166 Q100 190 172 166" fill="none" stroke="#F2B45A" stroke-width="2" opacity=".85"/>
+    <path d="M40 180 Q100 200 160 180" fill="none" stroke="#FFD28A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="0 11"/>
+    <ellipse cx="100" cy="213" rx="36" ry="6" fill="#3A1406"/>
+    <ellipse cx="100" cy="150" rx="86" ry="13" fill="#D9874A"/>
+    <ellipse cx="100" cy="150" rx="86" ry="13" fill="none" stroke="#FFCF85" stroke-width="2"/>
+    <ellipse cx="100" cy="150.5" rx="75" ry="9" fill="url(#dOil)"/>
+    <ellipse class="oil-glint" cx="100" cy="149" rx="16" ry="2.4" fill="#FFC870" opacity=".7"/>
+  </svg>
+</button>
+
+<!-- Wallpaper switcher + settings -->
+<nav class="dock" aria-label="Wallpaper and settings">
+  <div class="thumbs" id="thumbs"></div>
+  <button class="icon-btn" id="autoBtn" type="button" aria-pressed="true" aria-label="Auto-rotate wallpapers">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
+  </button>
+  <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</nav>
+
+<dialog id="settings">
+  <form method="dialog" class="settings-form">
+    <h2 class="display">Deeksha settings</h2>
+    <label>Title<input type="text" id="sTitle" maxlength="40"></label>
+    <div class="two">
+      <label>Start date<input type="date" id="sStart" required></label>
+      <label>Final day<input type="date" id="sEnd" required></label>
+    </div>
+    <label class="check"><input type="checkbox" id="sEmbers"> Floating lamp embers</label>
+    <label class="check"><input type="checkbox" id="sDiya"> Diya lamp</label>
+    <label>Wallpaper change every
+      <select id="sRotate">
+        <option value="0">Never</option>
+        <option value="60">1 minute</option>
+        <option value="300">5 minutes</option>
+        <option value="1800">30 minutes</option>
+      </select>
+    </label>
+    <button type="button" class="share" id="sShare">Share link with these dates</button>
+    <div class="actions">
+      <button type="button" class="ghost" id="sReset">Reset</button>
+      <button type="submit" value="save" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

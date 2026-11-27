@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Ayyappa Deeksha Countdown",
+  "description": "Replaces the new tab page with the Mandala Deeksha countdown.",
+  "version": "1.0.0",
+  "chrome_url_overrides": { "newtab": "index.html" },
+  "icons": { "128": "assets/icon128.png" }
+}
