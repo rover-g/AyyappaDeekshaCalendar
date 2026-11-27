@@ -20,8 +20,10 @@
     { id: 'ashtottarams', te: 'అష్టోత్తర శతనామావళులు', en: 'Durga, Lakshmi, Saraswati, Shiva, Vishnu' },
     { id: 'ayyappa-pooja', te: 'అయ్యప్ప పూజ', en: 'Ayyappa Pooja' },
     { id: 'sharanu-ghosha', te: 'అయ్యప్ప శరణు ఘోష', en: 'Sharanu Ghosha' },
-    { id: 'harathi', te: 'మంగళ హారతి', en: 'Mangala Harathi' }
+    { id: 'harathi', te: 'మంగళ హారతి · హరివరాసనం', en: 'Mangala Harathi and Harivarasanam' }
   ];
+  // Full daily pooja in booklet order; the five extra ashtottarams are optional and opened on their own.
+  const DAILY = CFG.dailyPooja || ['vighneshwara', 'subrahmanya', 'ayyappa-pooja', 'sharanu-ghosha', 'harathi'];
   const usable = (s) => s && (s.proofread || PROOF);
   const seg = (id) => SEGMENTS.find((s) => s.id === id);
   const MON_L = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -87,7 +89,7 @@
       $('resumeBar').style.width = Math.round(((S.step + 1) / g.steps.length) * 100) + '%';
     }
 
-    const ready = ORDER.map((o) => o.id).filter((id) => usable(seg(id)));
+    const ready = DAILY.filter((id) => usable(seg(id)));
     $('startDaily').disabled = !ready.length;
     $('startDaily').textContent = ok ? 'Start from the beginning' : 'Start pooja';
     $('startDaily').className = ok ? 'ghost wide big' : 'primary wide big';
@@ -100,7 +102,7 @@
       return '<button type="button" class="card" ' + (can ? 'data-seg="' + o.id + '"' : 'disabled') + '>' +
         '<span class="c-num">' + (n + 1) + '</span>' +
         '<span class="c-main"><span class="c-te">' + esc(o.te) + '</span><span class="c-en">' + esc(o.en) +
-        (g ? ' · ' + g.steps.length + ' steps · about ' + g.minutes + ' min' : '') + '</span>' +
+        (g ? ' · ' + g.steps.length + (g.steps.length === 1 ? ' step' : ' steps') + ' · about ' + g.minutes + ' min' : '') + '</span>' +
         (!can ? '<span class="tag">Coming soon</span>' : (!g.proofread ? '<span class="tag">Not yet checked</span>' : '')) + '</span>' +
         (doneToday.includes(o.id) ? TICK : '') + '</button>';
     }).join('');
@@ -112,7 +114,7 @@
     startSession([b.dataset.seg]); openReader(false);
   });
   $('startDaily').addEventListener('click', () => {
-    const ready = ORDER.map((o) => o.id).filter((id) => usable(seg(id))); if (!ready.length) return;
+    const ready = DAILY.filter((id) => usable(seg(id))); if (!ready.length) return;
     if (S && !confirm('Start from the beginning? Your saved place will be replaced.')) return;
     startSession(ready); openReader(false);
   });
@@ -124,7 +126,8 @@
 
   // ---------- reader ----------
   const body = $('rBody');
-  const line = (te) => esc(EN() ? TL(te) : te);
+  const glue = (t) => t.replace(/\s+([।॥|]+)/g, '\u00a0$1'); // keep end marks on the same line as the last word
+  const line = (te) => esc(glue(EN() ? TL(te) : te));
   function sankalpa(b) {
     const parts = b.text.split(/(\([^)]*\))/);
     return parts.map((p) => {
