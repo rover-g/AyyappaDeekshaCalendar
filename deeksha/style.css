@@ -30,7 +30,7 @@ body{background:#0A0806;color:var(--ink);font-family:Inter,system-ui,sans-serif;
 h1{margin:0;font-size:clamp(38px,5.2vh,60px);line-height:1;letter-spacing:-.03em;
   background:linear-gradient(180deg,#FFF6E3 0%,#FFD58A 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .range{margin:8px 0 0;color:var(--muted);font-size:15px}
-.clock{text-align:right;display:flex;flex-direction:column;gap:2px}
+.clock{text-align:left;display:flex;flex-direction:column;gap:2px}
 .clock-time{font-size:34px;line-height:1;letter-spacing:-.02em}
 .clock-date{font-size:13px;color:var(--muted)}
 
@@ -83,6 +83,9 @@ h1{margin:0;font-size:clamp(38px,5.2vh,60px);line-height:1;letter-spacing:-.03em
 .cell.today{background:linear-gradient(160deg,#FFC766,#F29A2E);border-color:#FFD58A;
   box-shadow:0 0 0 3px rgba(255,181,71,.22),0 0 26px rgba(255,170,60,.55);animation:glow 2.8s ease-in-out infinite}
 .cell.today .num{color:var(--gold-ink)} .cell.today .mon{color:#4A2E08}
+.cell.today{transform:scale(1.18);z-index:2}
+.cell.today:hover{transform:scale(1.22)}
+.cell.today .num{font-size:clamp(24px,3.8vh,36px)}
 @keyframes glow{50%{box-shadow:0 0 0 5px rgba(255,181,71,.12),0 0 38px rgba(255,170,60,.75)}}
 .cell.final:not(.today){border-color:rgba(255,181,71,.7)}
 .cell.final::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
@@ -179,13 +182,14 @@ body.no-diya .diya,body.no-diya .diya-aura{display:none}
   .bg-shade{background:linear-gradient(0deg,rgba(8,6,4,.92) 30%,rgba(8,6,4,.55) 100%)}
   .hero{grid-template-columns:1fr;justify-items:center}
   .stats{width:100%}
-  .dock{left:50%;right:auto;transform:translateX(-50%)}
-  .shell{padding-bottom:96px}
+  .dock{position:relative;left:auto;right:auto;bottom:auto;transform:none;width:fit-content;margin:4px auto 28px}
+  .shell{padding-bottom:16px}
   :root{--diya-size:64px;--diya-x:calc(100% - 52px)}
   .diya{position:absolute;bottom:auto;top:14px}
   .diya-aura{position:absolute;bottom:auto;top:40px;transform:translate(-50%,-50%);width:70vmin}
   .thumb{width:44px;height:30px}
-  .dock{bottom:max(12px,env(safe-area-inset-bottom))}
+  .top{padding-right:64px}
+  .dock{margin-bottom:max(28px,env(safe-area-inset-bottom))}
 }
 @media (prefers-reduced-motion:reduce){
   .bg-layer,.cell.today,.flame,.halo,.diya-aura,.diya-pool,.diya.ignite .flame-group{animation:none}
