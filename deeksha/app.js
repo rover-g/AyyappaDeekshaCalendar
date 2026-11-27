@@ -71,6 +71,7 @@
   // ---------- calendar ----------
   const CROSS = '<svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">' +
                 '<line x1="8" y1="8" x2="92" y2="92"/><line x1="92" y1="8" x2="8" y2="92"/></svg>';
+  const PJ = '<span class="pj" aria-hidden="true"><svg viewBox="0 0 20 22"><path d="M10 1.5c2.2 3.6 3.2 5.3 3.2 7a3.2 3.2 0 0 1-6.4 0c0-1.7 1-3.4 3.2-7z" fill="#FFB547"/><path d="M10 5.5c1 1.7 1.5 2.5 1.5 3.4a1.5 1.5 0 0 1-3 0c0-.9.5-1.7 1.5-3.4z" fill="#FFF1D2"/><path d="M1.5 13c.5 4.6 4.3 7 8.5 7s8-2.4 8.5-7z" fill="#C0602E"/><ellipse cx="10" cy="13" rx="8.5" ry="1.8" fill="#E09452"/></svg></span>';
   const CHECK = '<span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
 
   const board = $('board');
@@ -96,14 +97,20 @@
     }
     $('dow').innerHTML = dow;
 
+    let poojaLog = {};
+    try { poojaLog = JSON.parse(localStorage.getItem('deeksha.pooja.log.v1') || '{}'); } catch (e) {}
+    const dk = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    document.body.classList.toggle('has-pooja', Object.keys(poojaLog).length > 0);
     $('days').innerHTML = days.map((x) => {
+      const pj = !!poojaLog[dk(x.d)];
       const cls = ['cell', 'row-' + x.row, x.row === M.focusRow && 'in-week', x.past && 'past', x.past && (checkMode ? 'check' : 'cross'),
                    x.today && 'today', x.we && 'we', x.final && 'final'].filter(Boolean).join(' ');
-      const label = x.d.toDateString() + (x.past ? ', completed' : x.today ? ', today' : '') + (x.final ? ', final day' : '');
+      const label = x.d.toDateString() + (x.past ? ', completed' : x.today ? ', today' : '') + (x.final ? ', final day' : '') + (pj ? ', pooja done' : '');
       return '<div class="' + cls + '" title="' + label + '" aria-label="' + label + '">' +
                '<span class="num display">' + x.d.getDate() + '</span>' +
                '<span class="mon">' + MON[x.d.getMonth()] + '</span>' +
                (x.past ? (checkMode ? CHECK : CROSS) : '') +
+               (pj ? PJ : '') +
              '</div>';
     }).join('');
     document.querySelectorAll('.cell.past svg line').forEach((l, n) => { l.style.animationDelay = (n * 18) + 'ms'; });
@@ -353,7 +360,8 @@
     sizeCanvas(); parts = Array.from({ length: 46 }, spawn); frame();
   }
   addEventListener('resize', () => { if (S.embers) sizeCanvas(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else setEmbers(S.embers); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else { setEmbers(S.embers); renderCalendar(true); } });
+  addEventListener('pageshow', (e) => { if (e.persisted) renderCalendar(true); });
 
   // ---------- diya ----------
   const diya = $('diya');
@@ -486,89 +494,65 @@
       if (canExport(c)) story.usedWallpaper = true;
       else plainBackground(g, W, H); // wallpaper can't be exported: paint over it so the image can still be saved
     }
+    // Shade only where text sits: top band for the title, bottom third for the numbers. The middle stays clear for the deity.
     let sh = g.createLinearGradient(0, 0, 0, H);
-    sh.addColorStop(0, 'rgba(8,6,4,.86)'); sh.addColorStop(.2, 'rgba(8,6,4,.5)'); sh.addColorStop(.36, 'rgba(8,6,4,.4)');
-    sh.addColorStop(.52, 'rgba(8,6,4,.8)'); sh.addColorStop(1, 'rgba(8,6,4,.95)');
+    sh.addColorStop(0, 'rgba(8,6,4,.85)'); sh.addColorStop(.2, 'rgba(8,6,4,.45)'); sh.addColorStop(.34, 'rgba(8,6,4,.06)');
+    sh.addColorStop(.5, 'rgba(8,6,4,.06)'); sh.addColorStop(.62, 'rgba(8,6,4,.62)'); sh.addColorStop(.74, 'rgba(8,6,4,.88)'); sh.addColorStop(1, 'rgba(8,6,4,.95)');
     g.fillStyle = sh; g.fillRect(0, 0, W, H);
 
-    const L = 84; // left margin; top/bottom kept clear of Instagram's own bars
+    const L = 84; // left margin; top 220 px and bottom 230 px kept clear of Instagram's own bars and reply box
     g.textBaseline = 'alphabetic';
-    g.fillStyle = '#FFB547'; g.font = '700 30px ' + I;
+    g.fillStyle = '#FFB547'; g.font = '700 28px ' + I;
     spaced(g, 'SWAMIYE SARANAM AYYAPPA', L, 250, 6);
-    drawDiya(g, W - 150, 268, .78);
+    drawDiya(g, W - 150, 262, .7);
 
-    g.font = '800 92px ' + D;
+    g.font = '800 84px ' + D;
     const tl = wrap(g, S.title || 'Mandala Deeksha', W - L - 230);
-    const tg = g.createLinearGradient(0, 290, 0, 290 + tl.length * 100); tg.addColorStop(0, '#FFF6E3'); tg.addColorStop(1, '#FFD58A');
+    const tg = g.createLinearGradient(0, 290, 0, 290 + tl.length * 92); tg.addColorStop(0, '#FFF6E3'); tg.addColorStop(1, '#FFD58A');
     g.fillStyle = tg;
-    tl.slice(0, 2).forEach((ln, n) => g.fillText(ln, L, 360 + n * 98));
-    let y = 360 + (Math.min(2, tl.length) - 1) * 98 + 62;
-    g.fillStyle = '#F2EBDF'; g.font = '500 38px ' + I; g.fillText(longDate(m.today), L, y);
+    tl.slice(0, 2).forEach((ln, n) => g.fillText(ln, L, 348 + n * 90));
+    let y = 348 + (Math.min(2, tl.length) - 1) * 90 + 52;
+    g.fillStyle = 'rgba(242,235,223,.75)'; g.font = '500 30px ' + I; g.fillText(longDate(m.today), L, y);
 
-    // ring
-    const rcx = W / 2, rcy = y + 300, R = 200;
-    g.fillStyle = 'rgba(10,8,6,.55)'; g.beginPath(); g.arc(rcx, rcy, R + 34, 0, 7); g.fill();
-    g.lineCap = 'round'; g.lineWidth = 26;
-    g.strokeStyle = 'rgba(255,220,170,.14)'; g.beginPath(); g.arc(rcx, rcy, R, 0, 7); g.stroke();
+    // ring, smaller and low, so the deity's face stays clear
+    const rcx = W / 2, rcy = 1215, R = 128;
+    g.fillStyle = 'rgba(10,8,6,.6)'; g.beginPath(); g.arc(rcx, rcy, R + 26, 0, 7); g.fill();
+    g.lineCap = 'round'; g.lineWidth = 17;
+    g.strokeStyle = 'rgba(255,220,170,.16)'; g.beginPath(); g.arc(rcx, rcy, R, 0, 7); g.stroke();
     const frac = Math.min(1, m.done / m.total);
     if (frac > 0) {
-      g.save(); g.shadowColor = 'rgba(255,181,71,.7)'; g.shadowBlur = 24; g.strokeStyle = '#FFB547';
+      g.save(); g.shadowColor = 'rgba(255,181,71,.7)'; g.shadowBlur = 20; g.strokeStyle = '#FFB547';
       g.beginPath(); g.arc(rcx, rcy, R, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2); g.stroke(); g.restore();
     }
     g.textAlign = 'center';
-    g.fillStyle = '#E6DCCB'; g.font = '700 32px ' + I; g.fillText('DAY', rcx, rcy - 92);
-    g.fillStyle = '#FFB547'; g.font = '800 168px ' + D; g.fillText(String(m.dayNum), rcx, rcy + 52);
-    g.fillStyle = '#E6DCCB'; g.font = '500 40px ' + I;
-    g.fillText(m.state === 'before' ? 'starts ' + shortDate(m.start) : m.state === 'after' ? 'complete' : 'of ' + m.total, rcx, rcy + 118);
+    g.fillStyle = '#E6DCCB'; g.font = '700 24px ' + I; g.fillText('DAY', rcx, rcy - 58);
+    g.fillStyle = '#FFB547'; g.font = '800 112px ' + D; g.fillText(String(m.dayNum), rcx, rcy + 38);
+    g.fillStyle = '#E6DCCB'; g.font = '500 30px ' + I;
+    g.fillText(m.state === 'before' ? 'starts ' + shortDate(m.start) : m.state === 'after' ? 'complete' : 'of ' + m.total, rcx, rcy + 84);
 
-    y = rcy + R + 92;
-    g.fillStyle = '#F7F1E6'; g.font = '500 38px ' + I;
+    y = rcy + R + 80;
+    g.fillStyle = '#F7F1E6'; g.font = '500 34px ' + I;
     g.fillText(m.state === 'during' ? m.done + ' completed  ·  ' + m.left + ' left' : m.state === 'before' ? 'Begins ' + shortDate(m.start) : 'All ' + m.total + ' days completed', rcx, y);
 
-    // full calendar
-    const rows = Math.ceil(m.total / 7), gap = 12, cw = (W - L * 2 - gap * 6) / 7;
-    const top = y + 54, room = 1680 - top - 50;
-    const ch = Math.min(104, (room - gap * (rows - 1)) / rows);
-    g.font = '700 22px ' + I;
-    for (let i = 0; i < 7; i++) {
-      const w = (m.start.getDay() + i) % 7;
-      g.fillStyle = w === 0 || w === 6 ? '#FFB547' : '#BDB2A0';
-      g.fillText(DOW[w].toUpperCase(), L + i * (cw + gap) + cw / 2, top + 22);
-    }
-    const checkMode = S.mark !== 'cross';
+    // one dot per day: gold = done, glowing = today, ring = still to come, larger ring = final day
+    const perRow = m.total > 54 ? Math.ceil(m.total / 2) : m.total;
+    const span = W - L * 2, step = Math.min(30, span / Math.max(1, perRow - 1)), r = Math.max(4, Math.min(8, step * .32));
     m.days.forEach((x) => {
-      const cxp = L + (x.i % 7) * (cw + gap), cyp = top + 44 + x.row * (ch + gap);
-      rr(g, cxp, cyp, cw, ch, 18);
-      if (x.today) { g.save(); g.shadowColor = 'rgba(255,170,60,.8)'; g.shadowBlur = 30; g.fillStyle = '#FFB547'; g.fill(); g.restore(); }
-      else { g.fillStyle = x.past ? 'rgba(0,0,0,.45)' : 'rgba(30,24,18,.8)'; g.fill();
-             g.lineWidth = x.final ? 3 : 1.5; g.strokeStyle = x.final ? 'rgba(255,181,71,.9)' : 'rgba(255,220,170,.16)'; g.stroke(); }
-      const ink = x.today ? '#1C1206' : x.past ? (checkMode ? '#C9BEAA' : '#7D7466') : '#F7F1E6';
-      g.fillStyle = ink; g.font = '800 ' + Math.round(ch * .4) + 'px ' + D;
-      g.fillText(String(x.d.getDate()), cxp + cw / 2, cyp + ch * .55);
-      g.fillStyle = x.today ? '#4A2E08' : x.past ? '#8F8576' : x.we ? '#FFB547' : '#BDB2A0';
-      g.font = '700 ' + Math.round(ch * .16) + 'px ' + I;
-      g.fillText(MON[x.d.getMonth()], cxp + cw / 2, cyp + ch * .82);
-      if (x.past) {
-        if (checkMode) {
-          const bx = cxp + cw - 20, by = cyp + 20;
-          g.fillStyle = '#FFB547'; g.beginPath(); g.arc(bx, by, 13, 0, 7); g.fill();
-          g.strokeStyle = '#1C1206'; g.lineWidth = 3.6; g.lineJoin = 'round';
-          g.beginPath(); g.moveTo(bx - 6, by + .5); g.lineTo(bx - 1.5, by + 5); g.lineTo(bx + 6.5, by - 4.5); g.stroke();
-        } else {
-          g.strokeStyle = '#FF6B4A'; g.lineWidth = 4;
-          g.beginPath(); g.moveTo(cxp + cw * .26, cyp + ch * .18); g.lineTo(cxp + cw * .74, cyp + ch * .84);
-          g.moveTo(cxp + cw * .74, cyp + ch * .18); g.lineTo(cxp + cw * .26, cyp + ch * .84); g.stroke();
-        }
-      }
-      if (x.final && !x.today) { g.fillStyle = '#FFB547'; g.beginPath(); g.arc(cxp + cw - 14, cyp + 14, 6, 0, 7); g.fill(); }
+      const row = Math.floor(x.i / perRow), col = x.i % perRow, cnt = Math.min(perRow, m.total - row * perRow);
+      const cx = W / 2 - (cnt - 1) * step / 2 + col * step, cy = y + 56 + row * (step + 6);
+      g.beginPath(); g.arc(cx, cy, x.today ? r * 1.55 : r, 0, 7);
+      if (x.today) { g.save(); g.shadowColor = 'rgba(255,170,60,.95)'; g.shadowBlur = 18; g.fillStyle = '#FFD58A'; g.fill(); g.restore(); }
+      else if (x.past) { g.fillStyle = '#FFB547'; g.fill(); }
+      else { g.lineWidth = 2; g.strokeStyle = x.final ? 'rgba(255,181,71,.95)' : 'rgba(255,220,170,.4)'; if (x.final) { g.beginPath(); g.arc(cx, cy, r * 1.4, 0, 7); g.lineWidth = 2.5; } g.stroke(); }
     });
 
-    g.fillStyle = '#FFB547'; g.font = '800 44px ' + D;
+    g.fillStyle = '#FFB547'; g.font = '800 40px ' + D;
     const word = 'TATVAMASI', sp = 12;
     let ww = -sp; for (const ch of word) ww += g.measureText(ch).width + sp;
-    g.textAlign = 'left'; spaced(g, word, (W - ww) / 2, 1730, sp); g.textAlign = 'center';
-    g.fillStyle = '#D9CFBF'; g.font = 'italic 500 28px ' + I;
-    g.fillText('“You are That” · the divine you seek is within you', W / 2, 1778);
+    const ty = Math.max(1560, y + 150);
+    g.textAlign = 'left'; spaced(g, word, (W - ww) / 2, ty, sp); g.textAlign = 'center';
+    g.fillStyle = '#D9CFBF'; g.font = 'italic 500 26px ' + I;
+    g.fillText('“You are That” · the divine you seek is within you', W / 2, ty + 44);
     g.textAlign = 'left';
 
     return new Promise((res) => c.toBlob(res, 'image/png'));
