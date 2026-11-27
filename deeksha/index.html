@@ -1,253 +1,304 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0A0806">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Deeksha">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<title>Swamiye Saranam Ayyappa · Deeksha Countdown</title>
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+:root{
+  --ink:#F7F1E6; --muted:#C9BFAE; --dim:#8D8475;
+  --gold:#FFB547; --gold-deep:#E8902A; --gold-ink:#1C1206;
+  --glass:rgba(14,11,8,.58); --glass-line:rgba(255,214,150,.14);
+  --cell:rgba(255,240,215,.06); --cell-line:rgba(255,220,170,.14);
+  --done:rgba(0,0,0,.35); --cross:#FF6B4A;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+html{overflow-x:hidden}
+body{background:#0A0806;color:var(--ink);font-family:Inter,system-ui,sans-serif;position:relative}
+.display{font-family:'Bricolage Grotesque',Inter,sans-serif;font-weight:800}
 
-<!-- Wallpaper layers (crossfade + slow Ken Burns drift) -->
-<div class="bg" aria-hidden="true">
-  <div class="bg-layer" id="bgA"></div>
-  <div class="bg-layer" id="bgB"></div>
-  <div class="bg-shade"></div>
-  <canvas id="embers"></canvas>
-</div>
+/* ---------- Wallpaper ---------- */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg-layer{position:absolute;inset:-4%;background-size:cover;background-position:var(--pos,70% 50%);opacity:0;
+  transition:opacity 1.6s ease;animation:drift 40s ease-in-out infinite alternate;will-change:transform}
+.bg-layer.on{opacity:1}
+@keyframes drift{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.09) translate3d(-1.5%,-1%,0)}}
+.bg-shade{position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(8,6,4,.92) 0%,rgba(8,6,4,.78) 34%,rgba(8,6,4,.25) 62%,rgba(8,6,4,0) 80%),
+  linear-gradient(0deg,rgba(8,6,4,.55) 0%,rgba(8,6,4,0) 30%)}
+#embers{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
-<main class="shell">
-  <section class="panel">
+/* ---------- Layout ---------- */
+.shell{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;padding:clamp(14px,3vh,48px) clamp(20px,4vw,72px) clamp(8px,1.4vh,40px)}
+.panel{width:min(700px,100%);display:flex;flex-direction:column;gap:clamp(10px,1.8vh,24px)}
 
-    <header class="top">
-      <div>
-        <p class="eyebrow">Swamiye Saranam Ayyappa</p>
-        <h1 class="display" id="title">Mandala Deeksha</h1>
-        <p class="range d-only" id="rangeLabel">Nov 11 → Dec 22</p>
-        <p class="today-line m-only" id="todayLine">—</p>
-      </div>
-      <div class="clock d-only">
-        <span class="clock-time display" id="clockTime">--:--</span>
-        <span class="clock-date" id="clockDate">—</span>
-      </div>
-    </header>
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.eyebrow{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+h1{margin:0;font-size:clamp(38px,5.2vh,60px);line-height:1;letter-spacing:-.03em;
+  background:linear-gradient(180deg,#FFF6E3 0%,#FFD58A 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.range{margin:8px 0 0;color:var(--muted);font-size:15px}
+.clock{text-align:left;display:flex;flex-direction:column;gap:2px}
+.clock-time{font-size:34px;line-height:1;letter-spacing:-.02em}
+.clock-date{font-size:13px;color:var(--muted)}
 
-    <section class="hero">
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-          <circle cx="60" cy="60" r="52" class="ring-track"></circle>
-          <circle cx="60" cy="60" r="52" class="ring-fill" id="ringFill"></circle>
-        </svg>
-        <div class="ring-center">
-          <span class="ring-k">Day</span>
-          <span class="ring-v display" id="dayNum">—</span>
-          <span class="ring-s" id="dayOf">of —</span>
-        </div>
-      </div>
+/* ---------- Hero: ring + stats ---------- */
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:stretch}
+.ring-wrap{position:relative;width:clamp(140px,19vh,190px);height:clamp(140px,19vh,190px);align-self:center;flex:none;
+  background:var(--glass);border:1px solid var(--glass-line);border-radius:50%;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.ring{position:absolute;inset:8px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:7;stroke-linecap:round}
+.ring-track{stroke:rgba(255,220,170,.12)}
+.ring-fill{stroke:var(--gold);transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 6px rgba(255,181,71,.6))}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-k{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.ring-v{font-size:clamp(48px,6.4vh,64px);line-height:1;color:var(--gold)}
+.ring-s{font-size:13px;color:var(--muted)}
 
-      <p class="compact m-only" id="compact">—</p>
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stat{background:var(--glass);border:1px solid var(--glass-line);border-radius:18px;padding:clamp(10px,1.4vh,14px) 18px;
+  display:flex;flex-direction:column;gap:2px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.stat.hot{background:linear-gradient(160deg,#FFC766,#F29A2E);border-color:transparent;color:var(--gold-ink);
+  box-shadow:0 10px 30px rgba(242,154,46,.3)}
+.stat.wide{grid-column:1/-1}
+.k{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hot .k,.hot .s{color:var(--gold-ink)}
+.v{font-size:clamp(34px,4.6vh,46px);line-height:1.05}
+.s{font-size:12px;font-weight:500}
+.countdown{font-size:clamp(20px,2.8vh,26px);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.countdown small{font-family:Inter,sans-serif;font-weight:600;font-size:12px;color:var(--muted);margin:0 10px 0 3px;letter-spacing:.08em}
 
-      <div class="stats">
-        <div class="stat">
-          <span class="k">Days completed</span>
-          <span class="v display" id="done">—</span>
-        </div>
-        <div class="stat hot">
-          <span class="k">Days remaining</span>
-          <span class="v display" id="left">—</span>
-          <span class="s">including today</span>
-        </div>
-        <div class="stat wide">
-          <span class="k">Until the final day ends</span>
-          <span class="countdown display" id="countdown">—</span>
-        </div>
-      </div>
-    </section>
+/* ---------- Calendar ---------- */
+.board{background:var(--glass);border:1px solid var(--glass-line);border-radius:24px;padding:14px;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+#days{margin-top:6px}
+.dow{text-align:center;padding:4px 0;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.dow.we{color:var(--gold)}
+.cell{position:relative;height:clamp(42px,6.3vh,70px);border-radius:12px;background:var(--cell);border:1px solid var(--cell-line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:transform .2s ease,border-color .2s ease}
+.cell:hover{transform:translateY(-2px);border-color:rgba(255,200,120,.45)}
+.num{font-size:clamp(20px,3.2vh,30px);line-height:1;letter-spacing:-.02em}
+.mon{font-size:9.5px;font-weight:700;letter-spacing:.2em;color:var(--muted)}
+.cell.we .mon{color:var(--gold)}
+.cell.past{background:var(--done);border-color:rgba(255,220,170,.06)}
+.cell.past .num,.cell.past .mon{color:var(--dim)}
+.cell.past svg{position:absolute;left:24%;top:16%;width:52%;height:68%;pointer-events:none}
+.cell.past svg line{stroke:var(--cross);stroke-width:2.6;stroke-linecap:round;vector-effect:non-scaling-stroke;
+  stroke-dasharray:120;stroke-dashoffset:120;animation:draw .5s ease forwards}
+.cell.past svg line+line{animation-delay:.12s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.cell.today{background:linear-gradient(160deg,#FFC766,#F29A2E);border-color:#FFD58A;
+  box-shadow:0 0 0 3px rgba(255,181,71,.22),0 0 26px rgba(255,170,60,.55);animation:glow 2.8s ease-in-out infinite}
+.cell.today .num{color:var(--gold-ink)} .cell.today .mon{color:#4A2E08}
+.cell.today{transform:scale(1.18);z-index:2}
+.cell.today:hover{transform:scale(1.22)}
+.cell.today .num{font-size:clamp(24px,3.8vh,36px)}
+@keyframes glow{50%{box-shadow:0 0 0 5px rgba(255,181,71,.12),0 0 38px rgba(255,170,60,.75)}}
+.cell.final:not(.today){border-color:rgba(255,181,71,.7)}
+.cell.final::after{content:'';position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
 
-    <section class="board collapsed" id="board" aria-label="Deeksha calendar">
-      <div class="board-head m-only">
-        <h2 class="display">Calendar</h2>
-        <button type="button" class="pill-btn" id="todayBtn">Today</button>
-      </div>
-      <div class="grid" id="dow"></div>
-      <div class="grid" id="days"></div>
-      <button type="button" class="full-btn m-only" id="fullBtn" aria-expanded="false" aria-controls="days">Full calendar</button>
-    </section>
+/* ---------- Footer ---------- */
+.foot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.legend{display:flex;gap:18px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:7px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw-done{background:rgba(0,0,0,.5);border:1px solid var(--cross)}
+.sw-today{background:var(--gold)}
+.sw-next{background:var(--cell);border:1px solid var(--cell-line)}
+.mantra{margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.mantra-word{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:17px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.mantra-mean{font-size:12px;color:var(--muted);font-style:italic}
 
-    <section class="info m-only" aria-label="Today and final day">
-      <div class="info-row">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-        <div><p class="info-main" id="infoDate">—</p><p class="info-sub" id="infoDay">—</p></div>
-      </div>
-      <div class="info-row">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
-        <div><p class="info-main" id="infoFinal">—</p><p class="info-sub" id="infoState" hidden></p></div>
-      </div>
-    </section>
+/* ---------- Dock ---------- */
+.dock{position:fixed;right:clamp(16px,2.4vw,36px);bottom:clamp(16px,3vh,32px);z-index:2;display:flex;gap:10px;align-items:center;
+  background:rgba(10,8,6,.55);border:1px solid var(--glass-line);border-radius:999px;padding:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.thumbs{display:flex;gap:6px}
+.thumb{width:56px;height:34px;border-radius:999px;border:2px solid transparent;background-size:cover;background-position:70% 50%;cursor:pointer;padding:0;opacity:.7;transition:all .2s}
+.thumb:hover{opacity:1}
+.thumb[aria-pressed="true"]{border-color:var(--gold);opacity:1}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.icon-btn:hover{background:rgba(255,255,255,.08)}
+.icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn[aria-pressed="true"]{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
-    <section class="m-count m-only" aria-live="off">
-      <p class="m-count-label" id="mCountLabel">Time until the final day ends</p>
-      <div class="m-count-row">
-        <div><span class="display" id="mDays">—</span><small>days</small></div>
-        <div><span class="display" id="mHours">—</span><small>hours</small></div>
-        <div><span class="display" id="mMins">—</span><small>minutes</small></div>
-      </div>
-    </section>
+/* ---------- Dialogs & sheets ---------- */
+dialog{border:1px solid var(--glass-line);border-radius:22px;background:#15110C;color:var(--ink);padding:0;
+  width:min(460px,92vw);max-height:calc(100dvh - 32px);overflow:hidden}
+dialog[open]{display:flex;flex-direction:column}
+dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+.settings-form{display:flex;flex-direction:column;min-height:0;flex:1}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 18px 10px 24px;flex:none}
+.dlg-head h2{margin:0;font-size:24px}
+.x-btn{width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.06);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.x-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.dlg-body{padding:6px 24px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px;min-height:0;flex:1}
+.dlg-foot{padding:14px 24px calc(18px + env(safe-area-inset-bottom));border-top:1px solid #2A2218;flex:none}
+.dlg-foot.two-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+fieldset{min-width:0;border:1px solid #2E251A;border-radius:16px;padding:14px 16px 16px;margin:0;display:flex;flex-direction:column;gap:12px}
+legend{padding:0 6px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+dialog label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);font-weight:500}
+dialog input[type=text],dialog input[type=date],dialog select{min-width:0;box-sizing:border-box;font:inherit;font-size:16px;color:var(--ink);background:#221B13;border:1px solid #3A2F22;border-radius:12px;padding:11px 12px;min-height:44px;color-scheme:dark;width:100%}
+dialog .check{flex-direction:row;align-items:center;gap:12px;font-size:15px;color:var(--ink);min-height:44px}
+dialog .check input{width:20px;height:20px;accent-color:var(--gold);flex:none}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:360px){.two{grid-template-columns:1fr}}
+.primary,.ghost{font:inherit;font-weight:700;border-radius:14px;padding:12px 18px;cursor:pointer;min-height:48px;font-size:16px}
+.primary{background:var(--gold);color:var(--gold-ink);border:0}
+.primary:disabled,.ghost:disabled{opacity:.45;cursor:default}
+.ghost{background:transparent;color:var(--ink);border:1px solid #3A2F22}
+.wide{width:100%}
+.link-btn{align-self:center;background:none;border:0;color:var(--dim);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;min-height:44px;padding:0 12px;margin-top:8px}
+.hint{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+.story-preview{position:relative;align-self:center;width:min(100%,260px);aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:#0E0B08;border:1px solid #2E251A}
+.story-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.story-preview img:not([src]){display:none}
+.story-preview p{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:16px;text-align:center;font-size:13px;color:var(--muted)}
+.story-preview img[src]+p{display:none}
+.thumbs.big{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.thumbs.big .thumb{width:100%;height:auto;aspect-ratio:3/4;border-radius:14px;position:relative;background-size:cover;opacity:.8}
+.thumb span{position:absolute;left:0;right:0;bottom:0;padding:16px 6px 6px;font-size:12px;font-weight:600;color:#fff;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));border-radius:0 0 12px 12px;text-align:center}
+.dock .thumb span{display:none}
 
-    <footer class="foot">
-      <div class="legend">
-        <span><i class="sw sw-done"></i>Completed</span>
-        <span><i class="sw sw-today"></i>Today</span>
-        <span><i class="sw sw-next"></i>Upcoming</span>
-      </div>
-      <p class="mantra" id="mantra"><span class="mantra-word">Tatvamasi</span><span class="mantra-mean">“You are That” · the divine you seek is within you</span></p>
-    </footer>
-  </section>
-</main>
+/* ---------- Phone-only pieces (hidden on laptop) ---------- */
+.m-only{display:none!important}
+.compact{margin:0;font-size:15px;color:var(--ink);text-align:center}
+.board-head{justify-content:space-between;align-items:center;margin:0 2px 10px}
+.board-head h2{margin:0;font-size:22px}
+.pill-btn{font:inherit;font-weight:600;font-size:14px;color:var(--gold);background:transparent;border:1px solid rgba(255,181,71,.55);border-radius:12px;padding:0 16px;min-height:40px;cursor:pointer}
+.full-btn{margin-top:14px;width:100%;min-height:50px;border:0;border-radius:14px;background:var(--gold);color:var(--gold-ink);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.full-btn[aria-expanded="true"]{background:transparent;color:var(--gold);border:1px solid rgba(255,181,71,.45)}
+.info{background:var(--glass);border:1px solid var(--glass-line);border-radius:20px;padding:4px 18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.info-row{display:flex;gap:14px;align-items:center;padding:14px 0}
+.info-row+.info-row{border-top:1px solid rgba(255,220,170,.1)}
+.info-row svg{width:24px;height:24px;flex:none;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.info-main{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px}
+.info-sub{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.m-count{text-align:center;padding:6px 0}
+.m-count-label{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.m-count-row{display:grid;grid-template-columns:repeat(3,1fr)}
+.m-count-row div{display:flex;flex-direction:column;align-items:center}
+.m-count-row div+div{border-left:1px solid rgba(255,220,170,.18)}
+.m-count-row span{font-size:36px;line-height:1.1;font-variant-numeric:tabular-nums}
+.m-count-row small{font-size:13px;color:var(--muted)}
+.mbar{position:fixed;left:0;right:0;bottom:0;z-index:5;justify-content:space-around;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:rgba(12,9,6,.92);border-top:1px solid rgba(255,220,170,.12);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.mbar-btn{flex:1;max-width:120px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  background:none;border:0;color:var(--ink);font:inherit;font-size:12px;font-weight:500;cursor:pointer;border-radius:12px}
+.mbar-btn:active{background:rgba(255,255,255,.06)}
+.mbar-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mbar-btn[hidden]{display:none}
 
-<!-- Diya: aura lights the scene, button holds the lamp (tap to put out / relight) -->
-<div class="diya-aura" aria-hidden="true"></div>
-<button class="diya ignite" id="diya" type="button" aria-pressed="true" aria-label="Diya lamp. Tap to put out or relight">
-  <span class="diya-pool" aria-hidden="true"></span>
-  <svg viewBox="0 0 200 230" aria-hidden="true">
-    <defs>
-      <radialGradient id="dHalo" cx="50%" cy="50%" r="50%">
-        <stop offset="0" stop-color="#FFC56A" stop-opacity=".75"/>
-        <stop offset=".45" stop-color="#FF9A2E" stop-opacity=".25"/>
-        <stop offset="1" stop-color="#FF8A1F" stop-opacity="0"/>
-      </radialGradient>
-      <linearGradient id="dOuter" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FF4E1A" stop-opacity=".9"/>
-        <stop offset=".5" stop-color="#FF9628"/>
-        <stop offset="1" stop-color="#FFC24F"/>
-      </linearGradient>
-      <linearGradient id="dBody" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#C8642F"/>
-        <stop offset=".55" stop-color="#8E3A17"/>
-        <stop offset="1" stop-color="#4A1A08"/>
-      </linearGradient>
-      <linearGradient id="dOil" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#2A0F04"/>
-        <stop offset=".5" stop-color="#6B3510"/>
-        <stop offset="1" stop-color="#2A0F04"/>
-      </linearGradient>
-    </defs>
-    <g class="flame-group">
-      <circle class="halo" cx="100" cy="98" r="62" fill="url(#dHalo)"/>
-      <path class="flame f-outer" d="M100 140 C70 129 73 92 100 26 C127 92 130 129 100 140 Z" fill="url(#dOuter)"/>
-      <path class="flame f-mid" d="M100 140 C81 131 83 103 100 58 C117 103 119 131 100 140 Z" fill="#FFD563"/>
-      <path class="flame f-core" d="M100 139 C90 134 91 117 100 90 C109 117 110 134 100 139 Z" fill="#FFF8E2"/>
-      <ellipse cx="100" cy="136" rx="7" ry="4.5" fill="#6FA8FF" opacity=".55"/>
-    </g>
-    <path class="smoke" d="M100 132 C92 112 110 98 100 78 C92 62 106 50 100 34" fill="none" stroke="#CFC6B8" stroke-width="3" stroke-linecap="round"/>
-    <path d="M100 150 Q98 144 100 138" stroke="#1E0C04" stroke-width="3.2" stroke-linecap="round" fill="none"/>
-    <path d="M14 150 C20 197 68 211 100 211 C132 211 180 197 186 150 Z" fill="url(#dBody)"/>
-    <path d="M28 166 Q100 190 172 166" fill="none" stroke="#F2B45A" stroke-width="2" opacity=".85"/>
-    <path d="M40 180 Q100 200 160 180" fill="none" stroke="#FFD28A" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="0 11"/>
-    <ellipse cx="100" cy="213" rx="36" ry="6" fill="#3A1406"/>
-    <ellipse cx="100" cy="150" rx="86" ry="13" fill="#D9874A"/>
-    <ellipse cx="100" cy="150" rx="86" ry="13" fill="none" stroke="#FFCF85" stroke-width="2"/>
-    <ellipse cx="100" cy="150.5" rx="75" ry="9" fill="url(#dOil)"/>
-    <ellipse class="oil-glint" cx="100" cy="149" rx="16" ry="2.4" fill="#FFC870" opacity=".7"/>
-  </svg>
-</button>
+/* finished-day mark: checkmark style */
+.chk{position:static;margin-top:2px;width:16px;height:16px;flex:none;border-radius:50%;background:var(--gold);display:grid;place-items:center;
+  box-shadow:0 0 8px rgba(255,181,71,.45)}
+.cell.past .chk svg{position:static;left:auto;top:auto;width:11px;height:11px;fill:none;stroke:#1C1206;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.cell.past.check{background:rgba(255,240,215,.05)}
+.cell.past.check .num{color:#C9BEAA}
+.cell.past.check .mon{display:none}
+body.mark-check .sw-done{background:var(--gold);border:0;border-radius:50%}
+.cell.pulse{animation:pulse 1s ease-in-out 3}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(255,181,71,.35),0 0 40px rgba(255,170,60,.9)}}
 
-<!-- Wallpaper switcher + settings -->
-<nav class="dock d-only" aria-label="Wallpaper and settings">
-  <div class="thumbs" id="thumbs"></div>
-  <button class="icon-btn" id="autoBtn" type="button" aria-pressed="true" aria-label="Auto-rotate wallpapers">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
-  </button>
-  <button class="icon-btn" id="storyBtnD" type="button" aria-label="Share today as an Instagram story image">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
-  </button>
-  <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-  </button>
-</nav>
+/* ---------- Diya ---------- */
+:root{
+  --diya-size:clamp(96px,8.5vw,190px);
+  --diya-bottom:clamp(14px,3.2vh,40px);
+  --panel-right:calc(clamp(20px,4vw,72px) + min(700px,100vw));
+  --diya-x:max(62vw,calc(var(--panel-right) + var(--diya-size) / 2 + 48px));
+}
+.diya{position:fixed;z-index:2;left:var(--diya-x);bottom:var(--diya-bottom);transform:translateX(-50%);
+  width:var(--diya-size);padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.diya svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 10px 14px rgba(0,0,0,.6))}
+.diya:focus-visible{outline-offset:6px;border-radius:12px}
+.diya-pool{position:absolute;left:50%;bottom:-6%;width:190%;height:30%;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,170,70,.45),rgba(255,140,40,.12) 60%,transparent);filter:blur(4px);
+  animation:aura 3.1s ease-in-out infinite;transition:opacity .6s}
+.diya-aura{position:fixed;z-index:1;pointer-events:none;left:var(--diya-x);bottom:calc(var(--diya-bottom) + var(--diya-size) * .62);
+  width:min(90vmin,900px);aspect-ratio:1;transform:translate(-50%,50%);border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,176,80,.30),rgba(255,140,40,.10) 45%,transparent);
+  mix-blend-mode:screen;animation:aura 3.1s ease-in-out infinite;transition:opacity .8s}
+@keyframes aura{0%,100%{opacity:.85}23%{opacity:1}41%{opacity:.72}63%{opacity:.95}80%{opacity:.78}}
 
-<!-- Phone bottom bar -->
-<nav class="mbar m-only" aria-label="Controls">
-  <button type="button" class="mbar-btn" id="audioBtn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><span>Audio</span></button>
-  <button type="button" class="mbar-btn" id="storyBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg><span>Share</span></button>
-  <button type="button" class="mbar-btn" id="wpBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg><span>Wallpaper</span></button>
-  <button type="button" class="mbar-btn" id="settingsBtnM"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
-</nav>
+.flame-group{transform-box:fill-box;transform-origin:50% 100%;transition:opacity .45s ease,transform .45s ease}
+.flame{transform-box:fill-box;transform-origin:50% 100%}
+.f-outer{animation:flick 2.6s ease-in-out infinite}
+.f-mid{animation:flick 1.9s ease-in-out infinite reverse}
+.f-core{animation:flick 1.3s ease-in-out infinite}
+.halo{transform-box:fill-box;transform-origin:50% 50%;animation:halo 2.3s ease-in-out infinite}
+@keyframes flick{
+  0%,100%{transform:scale(1,1) skewX(0)}
+  14%{transform:scale(.96,1.05) skewX(-2deg)}
+  31%{transform:scale(1.03,.95) skewX(1.5deg)}
+  47%{transform:scale(.97,1.08) skewX(-1deg)}
+  66%{transform:scale(1.02,.97) skewX(2.5deg)}
+  83%{transform:scale(.98,1.03) skewX(-1.5deg)}}
+@keyframes halo{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:1}}
+.diya.ignite .flame-group{animation:ignite 1.1s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes ignite{0%{transform:scale(0);opacity:0}35%{transform:scale(.35,.5);opacity:1}100%{transform:scale(1);opacity:1}}
+.diya:hover .halo{opacity:1}
 
-<dialog id="wpSheet" class="sheet" aria-labelledby="wpTitle">
-  <div class="dlg-head"><h2 class="display" id="wpTitle">Wallpaper</h2>
-    <button type="button" class="x-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="dlg-body">
-    <div class="thumbs big" id="mThumbs"></div>
-    <label class="check"><input type="checkbox" id="mAuto"> Change wallpaper automatically</label>
-  </div>
-</dialog>
+.smoke{opacity:0;stroke-dasharray:140;stroke-dashoffset:140}
+body.diya-out .flame-group{opacity:0;transform:scale(.15)}
+body.diya-out .diya-aura,body.diya-out .diya-pool{opacity:0}
+body.diya-out .oil-glint{opacity:.15}
+body.diya-out .smoke{animation:smoke 2.4s ease-out forwards}
+@keyframes smoke{0%{opacity:0;stroke-dashoffset:140}20%{opacity:.55}100%{opacity:0;stroke-dashoffset:0;transform:translateY(-18px)}}
+body.no-diya .diya,body.no-diya .diya-aura{display:none}
 
-<dialog id="storySheet" class="sheet" aria-labelledby="storyTitle">
-  <div class="dlg-head"><h2 class="display" id="storyTitle">Share today</h2>
-    <button type="button" class="x-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="dlg-body">
-    <div class="story-preview"><img id="storyImg" alt="Story image of today's Deeksha progress"><p id="storyMsg">Creating your story image…</p></div>
-    <p class="hint">Tap <b>Share</b> and pick Instagram. If Instagram isn't in the list, tap <b>Save image</b>, then add it to your story from Photos.</p>
-  </div>
-  <div class="dlg-foot two-btn">
-    <button type="button" class="ghost" id="storySave" disabled>Save image</button>
-    <button type="button" class="primary" id="storyShare" disabled>Share</button>
-  </div>
-</dialog>
+@media (orientation:portrait){.bg-layer{background-position:var(--pos-m,75% 40%)}}
+.share{background:transparent;color:var(--gold);border:1px solid rgba(255,181,71,.4);border-radius:12px;padding:11px 14px;font:inherit;font-weight:600;cursor:pointer;min-height:44px}
 
-<dialog id="settings" class="sheet" aria-labelledby="setTitle">
-  <form method="dialog" class="settings-form">
-    <div class="dlg-head"><h2 class="display" id="setTitle">Settings</h2>
-      <button type="button" class="x-btn" id="sClose" aria-label="Close settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="dlg-body">
-      <fieldset>
-        <legend>Your Deeksha</legend>
-        <label>Title<input type="text" id="sTitle" maxlength="40" autocomplete="off"></label>
-        <div class="two">
-          <label>Start date<input type="date" id="sStart" required></label>
-          <label>Final day<input type="date" id="sEnd" required></label>
-        </div>
-        <button type="button" class="share" id="sShare">Share link with these dates</button>
-      </fieldset>
-      <fieldset>
-        <legend>Appearance</legend>
-        <label>Finished days
-          <select id="sMark">
-            <option value="check">Checkmark</option>
-            <option value="cross">Cross over the date</option>
-          </select>
-        </label>
-        <label class="check"><input type="checkbox" id="sDiya"> Diya lamp</label>
-        <label class="check"><input type="checkbox" id="sEmbers"> Floating lamp embers</label>
-        <label>Wallpaper change every
-          <select id="sRotate">
-            <option value="0">Never</option>
-            <option value="60">1 minute</option>
-            <option value="300">5 minutes</option>
-            <option value="1800">30 minutes</option>
-          </select>
-        </label>
-      </fieldset>
-      <button type="button" class="link-btn" id="sReset">Reset everything to defaults</button>
-    </div>
-    <div class="dlg-foot">
-      <button type="submit" value="save" class="primary wide">Save</button>
-    </div>
-  </form>
-</dialog>
+/* 7-row ranges (43+ days) on laptops: shrink cells so the page still fits one screen */
+@media (min-width:761px){
+  .board.rows-7 .cell,.board.rows-8 .cell{height:clamp(36px,4.9vh,60px)}
+  .board.rows-7 ~ .foot,.board.rows-8 ~ .foot{margin-top:-4px}
+  .board.rows-7 .num,.board.rows-8 .num{font-size:clamp(18px,2.7vh,27px)}
+}
 
-<script src="config.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+/* ---------- Small screens ---------- */
+@media (max-width:760px){
+  .m-only{display:block!important}
+  .board-head,.mbar{display:flex!important}
+  .d-only{display:none!important}
+  .bg-shade{background:linear-gradient(180deg,rgba(8,6,4,.88) 0%,rgba(8,6,4,.55) 22%,rgba(8,6,4,.35) 38%,rgba(8,6,4,.78) 62%,rgba(8,6,4,.94) 100%)}
+  .shell{padding:calc(18px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
+  .panel{gap:18px}
+  .top{padding-right:64px;display:block}
+  .eyebrow{font-size:11px;letter-spacing:.2em}
+  h1{font-size:clamp(30px,9vw,40px);line-height:1.08}
+  .today-line{margin:8px 0 0;font-size:16px;color:var(--ink)}
+  .hero{grid-template-columns:1fr;justify-items:center;gap:12px}
+  .ring-wrap{width:min(62vw,240px);height:min(62vw,240px);background:rgba(10,8,6,.5)}
+  .ring-v{font-size:min(19vw,76px)}
+  .ring-k{font-size:13px}
+  .ring-s{font-size:16px}
+  .stats{display:none}
+  .board{padding:16px 12px 14px}
+  .grid{gap:6px}
+  .board.collapsed .cell:not(.in-week){display:none}
+  .board.collapsed .cell{height:66px}
+  .cell{height:56px}
+  .num{font-size:22px}
+  .mon{font-size:9px;letter-spacing:.14em}
+  .cell.today .num{font-size:26px}
+  .chk{width:14px;height:14px}
+  .cell.past .chk svg{width:9px;height:9px}
+  .foot{justify-content:center;flex-direction:column;gap:10px}
+  .mantra{align-items:center;text-align:center}
+  .legend{gap:14px;font-size:12px}
+  :root{--diya-size:60px;--diya-x:calc(100% - 46px)}
+  .diya{position:absolute;bottom:auto;top:calc(10px + env(safe-area-inset-top))}
+  .diya-aura{position:absolute;bottom:auto;top:0;left:0;right:0;width:auto;height:240px;aspect-ratio:auto;transform:none;border-radius:0;
+    background:radial-gradient(circle at calc(100% - 46px) 46px,rgba(255,176,80,.30),rgba(255,140,40,.10) 110px,transparent 190px)}
+  .diya-pool{width:130%}
+  dialog.sheet{margin:auto auto 0;width:100%;max-width:100%;border-radius:22px 22px 0 0;border-bottom:0;max-height:92dvh}
+}
+@media (max-width:340px){
+  .grid{gap:4px} .board{padding:14px 8px 12px}
+  .num{font-size:19px} .mon{font-size:8px;letter-spacing:.08em}
+  .board.collapsed .cell{height:58px}
+  .m-count-row span{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){
+  .bg-layer,.cell.today,.flame,.halo,.diya-aura,.diya-pool,.diya.ignite .flame-group{animation:none}
+  .cell.past svg line{animation:none;stroke-dashoffset:0}
+  .cell.pulse{animation:none;outline:3px solid var(--gold);outline-offset:2px}
+  .cell.today{transform:none}
+}
